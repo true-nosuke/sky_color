@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const STORAGE_KEY_POSTS = 'sky_color_posts';
     const STORAGE_KEY_LAST_DATE = 'sky_color_last_post_date';
     const MAX_RADIUS = 40;
-    const MIN_RADIUS = 20;
+    const MIN_RADIUS = 40;
 
     // --- DOM要素 ---
     const svg = document.getElementById('japanMap'); // SVG要素 日本地図
@@ -66,13 +66,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 位置を選択状態にする
                 selectPosition(svgPos.x, svgPos.y);
                 
-                showMessage(`現在地を取得しました (${lat.toFixed(2)}, ${lon.toFixed(2)})。微調整も可能です。`, 'success');
+                showMessage(`現在地を取得しました！ (${lat.toFixed(2)}, ${lon.toFixed(2)})。`, 'success');
                 geoBtn.disabled = false;
             },
             (error) => {
                 console.error(error);
-                let msg = '位置情報の取得に失敗しました。';
-                if (error.code === 1) msg = '位置情報の利用が許可されていません。';
+                let msg = '位置情報の取得に失敗しました！';
+                if (error.code === 1) msg = '位置情報の利用が許可されていません！';
                 showMessage(msg + ' 地図をクリックして選択してください。', 'error');
                 geoBtn.disabled = false;
             }
@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleSubmit() {
         if (!selectedPosition) return;
         if (isDailyLimitReached()) {
-            showMessage('エラー: 本日は既に投稿済みです。', 'error'); //TODO: 色の変更は可能にする。
+            showMessage('エラー: 本日は既に投稿済みです！', 'error'); //TODO: 色の変更は可能にする。
             return;
         }
 
@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
         submitBtn.textContent = '投稿完了';
         
         checkDailyLimit(); // 制限チェックを再実行してUI更新
-        showMessage('投稿しました！ありがとうございます。', 'success');
+        showMessage('投稿成功！ありがとうございました！', 'success');
     }
 
     // --- データ操作 ---

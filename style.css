@@ -1,4 +1,4 @@
-/* リセットと基本スタイル */
+/* CSSは、AIが生成しました。*/
 * {
     box-sizing: border-box;
     margin: 0;
@@ -23,7 +23,6 @@ h1 {
     margin-bottom: 0.5rem;
 }
 
-/* メインレイアウト */
 main {
     max-width: 800px;
     margin: 0 auto;
@@ -33,7 +32,6 @@ main {
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
-/* コントロールパネル */
 .controls {
     margin-bottom: 20px;
     padding: 15px;
@@ -112,7 +110,6 @@ button:hover:not(:disabled) {
     color: #28a745;
 }
 
-/* 地図コンテナ */
 .map-container {
     width: 100%;
     position: relative;
@@ -125,10 +122,9 @@ svg {
     width: 100%;
     height: auto;
     display: block;
-    cursor: crosshair; /* クリックできることを示す */
+    cursor: crosshair;
 }
 
-/* 地図のスタイル */
 .land-mass path {
     fill: #e0e0e0;
     stroke: #999;
@@ -140,20 +136,18 @@ svg {
     fill: #d0d0d0;
 }
 
-/* 投稿された円のスタイル */
 .post-circle {
     transition: r 0.3s, opacity 0.3s;
     cursor: pointer;
-    mix-blend-mode: multiply; /* 色を重ね合わせて深みを出す */
+    mix-blend-mode: multiply;
 }
 
 .post-circle:hover {
     stroke: #fff;
     stroke-width: 2px;
-    opacity: 1 !important; /* ホバー時は不透明度を上げる */
+    opacity: 1 !important;
 }
 
-/* ツールチップ */
 .tooltip {
     position: absolute;
     background-color: rgba(0, 0, 0, 0.8);
@@ -161,12 +155,11 @@ svg {
     padding: 5px 10px;
     border-radius: 4px;
     font-size: 12px;
-    pointer-events: none; /* マウスイベントを透過 */
+    pointer-events: none;
     z-index: 1000;
     white-space: nowrap;
 }
 
-/* レスポンシブ調整 */
 @media (min-width: 600px) {
     .controls {
         flex-direction: row;
