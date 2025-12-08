@@ -198,7 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function handleReset() {
+    function handleReset() { //TODO : デバッグ用 FireBase導入後削除
         if(confirm('本当に全データを削除しますか？')) {
             localStorage.removeItem(STORAGE_KEY_POSTS);
             localStorage.removeItem(STORAGE_KEY_LAST_DATE);
