@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleSubmit() {
         if (!selectedPosition) return;
         if (isDailyLimitReached()) {
-            showMessage('エラー: 本日は既に投稿済みです。', 'error');
+            showMessage('エラー: 本日は既に投稿済みです。', 'error'); //TODO: 色の変更は可能にする。
             return;
         }
 
@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function checkDailyLimit() {
         if (isDailyLimitReached()) {
             submitBtn.disabled = true;
-            submitBtn.textContent = '本日の投稿は完了しています';
+            submitBtn.textContent = '本日の投稿は完了しています'; //TODO: 色の変更は可能にする。
             showMessage('本日は既に投稿済みです。', 'success');
         }
     }
@@ -279,15 +279,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (evt.target.tagName === 'circle' && evt.target.classList.contains('post-circle')) {
             const date = evt.target.dataset.date;
             const color = evt.target.dataset.color;
-            tooltip.innerHTML = `日時: ${date}<br>色: <span style="color:${color}">■</span> ${color}`;
+            tooltip.innerHTML = `日時: ${date}<br>ソラ: <span style="color:${color}">███</span> ${color}`;
             tooltip.style.display = 'block';
         }
     }
 
     function moveTooltip(evt) {
         // マウスの少し右下に表示
-        tooltip.style.left = (evt.pageX + 10) + 'px';
-        tooltip.style.top = (evt.pageY + 10) + 'px';
+        tooltip.style.left = (evt.pageX + 0) + 'px';
+        tooltip.style.top = (evt.pageY - 50) + 'px';
     }
 
     function hideTooltip() {
