@@ -21,7 +21,12 @@
             
             <div id="statusMessage" class="status"></div>
             
-            <button id="submitBtn" disabled>地図をクリックして位置を決定</button>
+            <div class="button-group">
+                <button id="geoBtn" class="primary-btn">📍 現在地から位置を決める</button>
+                <button id="submitBtn" disabled>この場所に色を置く</button>
+            </div>
+            <p class="hint">※地図をクリックして位置を微調整できます</p>
+
             <button id="resetLocalBtn" class="secondary-btn">データをリセット(デバッグ用)</button>
         </div>
 

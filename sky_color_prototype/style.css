@@ -51,6 +51,20 @@ main {
     gap: 10px;
 }
 
+.button-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.hint {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: -10px;
+    margin-bottom: 10px;
+}
+
 input[type="color"] {
     border: none;
     width: 50px;

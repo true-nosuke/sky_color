@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentSelection = document.getElementById('currentSelection');
     const colorPicker = document.getElementById('colorPicker');
     const submitBtn = document.getElementById('submitBtn');
+    const geoBtn = document.getElementById('geoBtn');
     const statusMessage = document.getElementById('statusMessage');
     const tooltip = document.getElementById('tooltip');
     const resetLocalBtn = document.getElementById('resetLocalBtn');
@@ -28,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // イベントリスナー登録
         svg.addEventListener('click', handleMapClick);
         submitBtn.addEventListener('click', handleSubmit);
+        geoBtn.addEventListener('click', handleGeoLocation);
         resetLocalBtn.addEventListener('click', handleReset);
         
         // ツールチップ制御 (イベント委譲)
@@ -37,6 +39,76 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- メインロジック ---
+
+    // 位置情報取得処理
+    function handleGeoLocation() {
+        if (isDailyLimitReached()) {
+            showMessage('本日は既に投稿済みです。', 'error');
+            return;
+        }
+
+        if (!navigator.geolocation) {
+            showMessage('お使いのブラウザは位置情報をサポートしていません。', 'error');
+            return;
+        }
+
+        showMessage('位置情報を取得中...', 'normal');
+        geoBtn.disabled = true;
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                
+                // 緯度経度をSVG座標に変換
+                const svgPos = latLonToSVG(lat, lon);
+                
+                // 位置を選択状態にする
+                selectPosition(svgPos.x, svgPos.y);
+                
+                showMessage(`現在地を取得しました (${lat.toFixed(2)}, ${lon.toFixed(2)})。微調整も可能です。`, 'success');
+                geoBtn.disabled = false;
+            },
+            (error) => {
+                console.error(error);
+                let msg = '位置情報の取得に失敗しました。';
+                if (error.code === 1) msg = '位置情報の利用が許可されていません。';
+                showMessage(msg + ' 地図をクリックして選択してください。', 'error');
+                geoBtn.disabled = false;
+            }
+        );
+    }
+
+    // 緯度経度 -> SVG座標変換 (簡易補正)
+    function latLonToSVG(lat, lon) {
+        // SVGの座標系と地図の投影に合わせて調整した係数
+        // 基準点: 那覇(26.2N, 127.7E) -> SVG(100, 650)付近
+        // 基準点: 稚内(45.4N, 141.6E) -> SVG(620, 150)付近
+        
+        // 経度 (X軸)
+        // 1度あたりのピクセル数: (620 - 100) / (141.6 - 127.7) ≈ 37.4
+        const x = (lon - 127.7) * 37.4 + 100;
+
+        // 緯度 (Y軸) - 北に行くほどYは小さくなる
+        // 1度あたりのピクセル数: (150 - 650) / (45.4 - 26.2) ≈ -26.0
+        const y = (lat - 26.2) * -26.0 + 650;
+
+        return { x, y };
+    }
+
+    // 共通の位置選択処理
+    function selectPosition(x, y) {
+        selectedPosition = { x, y };
+
+        // 選択マーカーを移動・表示
+        currentSelection.setAttribute('cx', x);
+        currentSelection.setAttribute('cy', y);
+        currentSelection.style.display = 'block';
+
+        // ボタン有効化
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'この場所に色を置く';
+    }
 
     // 地図クリック時の処理
     function handleMapClick(evt) {
@@ -48,16 +120,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // クリック位置をSVG内部座標に変換
         const point = getSVGCoordinates(evt);
-        selectedPosition = { x: point.x, y: point.y };
-
-        // 選択マーカーを移動・表示
-        currentSelection.setAttribute('cx', point.x);
-        currentSelection.setAttribute('cy', point.y);
-        currentSelection.style.display = 'block';
-
-        // ボタン有効化
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'この場所に色を置く';
+        
+        selectPosition(point.x, point.y);
         
         showMessage('位置を選択しました。色を決めてボタンを押してください。');
     }
