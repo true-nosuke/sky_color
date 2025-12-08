@@ -1,0 +1,162 @@
+/* リセットと基本スタイル */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+    color: #333;
+    background-color: #fafafa;
+    line-height: 1.6;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+h1 {
+    color: #007bff;
+    margin-bottom: 0.5rem;
+}
+
+/* メインレイアウト */
+main {
+    max-width: 800px;
+    margin: 0 auto;
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+/* コントロールパネル */
+.controls {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+input[type="color"] {
+    border: none;
+    width: 50px;
+    height: 50px;
+    cursor: pointer;
+    background: none;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    background-color: #007bff;
+    color: white;
+    transition: background-color 0.3s;
+}
+
+button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+button:hover:not(:disabled) {
+    background-color: #0056b3;
+}
+
+.secondary-btn {
+    background-color: #6c757d;
+    font-size: 12px;
+    padding: 5px 10px;
+}
+
+.status {
+    font-weight: bold;
+    min-height: 1.6em;
+}
+
+.status.error {
+    color: #dc3545;
+}
+
+.status.success {
+    color: #28a745;
+}
+
+/* 地図コンテナ */
+.map-container {
+    width: 100%;
+    position: relative;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    cursor: crosshair; /* クリックできることを示す */
+}
+
+/* 地図のスタイル */
+.land-mass path {
+    fill: #e0e0e0;
+    stroke: #999;
+    stroke-width: 1;
+    transition: fill 0.3s;
+}
+
+.land-mass path:hover {
+    fill: #d0d0d0;
+}
+
+/* 投稿された円のスタイル */
+.post-circle {
+    transition: r 0.3s, opacity 0.3s;
+    cursor: pointer;
+    mix-blend-mode: multiply; /* 色を重ね合わせて深みを出す */
+}
+
+.post-circle:hover {
+    stroke: #fff;
+    stroke-width: 2px;
+    opacity: 1 !important; /* ホバー時は不透明度を上げる */
+}
+
+/* ツールチップ */
+.tooltip {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    pointer-events: none; /* マウスイベントを透過 */
+    z-index: 1000;
+    white-space: nowrap;
+}
+
+/* レスポンシブ調整 */
+@media (min-width: 600px) {
+    .controls {
+        flex-direction: row;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+}

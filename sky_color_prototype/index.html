@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日本を空色に - Sky Color Project</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>日本を空色に</h1>
+        <p>あなたの空の色を地図に届けよう</p>
+    </header>
+
+    <main>
+        <div class="controls">
+            <div class="control-group">
+                <label for="colorPicker">今日の色を選ぶ:</label>
+                <input type="color" id="colorPicker" value="#87CEEB">
+            </div>
+            
+            <div id="statusMessage" class="status"></div>
+            
+            <button id="submitBtn" disabled>地図をクリックして位置を決定</button>
+            <button id="resetLocalBtn" class="secondary-btn">データをリセット(デバッグ用)</button>
+        </div>
+
+        <div class="map-container">
+            <!-- 日本地図SVG -->
+            <!-- viewBoxは適宜調整 -->
+            <svg id="japanMap" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <filter id="glow">
+                        <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+                        <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                </defs>
+                
+                <!-- 海（背景） -->
+                <rect width="100%" height="100%" fill="#f0f8ff" />
+
+                <!-- 日本地図の簡易パス (北海道, 本州, 四国, 九州, 沖縄) -->
+                <g class="land-mass">
+                    <!-- 北海道 -->
+                    <path d="M620,150 L680,120 L720,160 L680,220 L600,200 Z" />
+                    <!-- 本州 -->
+                    <path d="M600,210 L620,250 L550,350 L450,400 L350,420 L300,400 L350,350 L450,300 L550,220 Z" />
+                    <!-- 四国 -->
+                    <path d="M320,430 L380,430 L370,470 L310,460 Z" />
+                    <!-- 九州 -->
+                    <path d="M230,420 L290,420 L280,500 L220,480 Z" />
+                    <!-- 沖縄 -->
+                    <path d="M100,650 L120,640 L130,660 L110,670 Z" />
+                </g>
+
+                <!-- 投稿された円を描画するグループ -->
+                <g id="postsLayer"></g>
+
+                <!-- 現在選択中の位置を示すマーカー -->
+                <circle id="currentSelection" r="10" fill="none" stroke="#ff0000" stroke-width="2" display="none" />
+            </svg>
+        </div>
+    </main>
+
+    <!-- ツールチップ -->
+    <div id="tooltip" class="tooltip" style="display: none;"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
