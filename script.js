@@ -37,6 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const STORAGE_KEY_LAST_DATE = 'sky_color_last_post_date';
     const MAX_RADIUS = 40;
     const MIN_RADIUS = 20;
+    // 統一サイズ（px）
+    const SHAPE_RADIUS = 30;
 
     // --- DOM要素 ---
     const svg = document.getElementById('japanMap'); // SVG要素 日本地図
@@ -174,7 +176,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const color = colorPicker.value;
-        const radius = Math.floor(Math.random() * (MAX_RADIUS - MIN_RADIUS + 1)) + MIN_RADIUS;
+        // サイズを統一する（ランダム化をやめる）
+        const radius = SHAPE_RADIUS;
 
         // 構築する投稿オブジェクト（ローカルで描画するため）
         const newPost = {
@@ -209,7 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // ローカルにも保存（デバッグ用）および描画
             newPost.id = docRef.id;
             savePost(newPost);
-            drawPost(newPost);
+            //drawPost(newPost);
 
             // 状態更新
             selectedPosition = null;
@@ -327,9 +330,10 @@ document.addEventListener('DOMContentLoaded', () => {
         stop2.setAttribute('stop-opacity', '1');
 
         const stop3 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-        stop3.setAttribute('offset', '100%'); // 境界で透明に（グラデーション）
+        stop3.setAttribute('offset', '100%');
         stop3.setAttribute('stop-color', post.color);
-        stop3.setAttribute('stop-opacity', '0');
+        // 全体を100%不透明にする（境界の透明化を無効化）
+        stop3.setAttribute('stop-opacity', '1');
 
         radialGradient.appendChild(stop1);
         radialGradient.appendChild(stop2);
@@ -337,7 +341,8 @@ document.addEventListener('DOMContentLoaded', () => {
         defs.appendChild(radialGradient);
 
         // ランダムな絵の具風の形状を生成（不規則なパスを使用）
-        const baseRadius = post.r || 30;
+        // 描画は統一サイズで表示する
+        const baseRadius = SHAPE_RADIUS;
         const paintShape = generatePaintShape(post.x, post.y, baseRadius);
         
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -351,7 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 絵の具を塗ったようなランダムな形状を生成する関数
     function generatePaintShape(cx, cy, radius) {
-        const points = 16; // 頂点数（多いほど滑らか）
+        const points = 26; // 頂点数（多いほど滑らか）
         const angleStep = (Math.PI * 2) / points;
         let pathData = '';
 
@@ -398,7 +403,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- ツールチップ ---
     //! 表示されないバグあり
     function showTooltip(evt) {
-        if (evt.target.tagName === 'circle' && evt.target.classList.contains('post-circle')) {
+        // どの要素でも post-circle クラスを持っていればツールチップを表示する
+        if (evt.target && evt.target.classList && evt.target.classList.contains('post-circle')) {
             const date = evt.target.dataset.date;
             const color = evt.target.dataset.color;
             tooltip.innerHTML = `日時: ${date}<br>ソラ: <span style="color:${color}">███</span> ${color}`;

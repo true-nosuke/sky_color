@@ -139,7 +139,7 @@ svg {
 .post-circle {
     transition: r 0.3s, opacity 0.3s;
     cursor: pointer;
-    mix-blend-mode: multiply;
+    mix-blend-mode: normal;
 }
 
 .post-circle:hover {
