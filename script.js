@@ -35,10 +35,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 定数・設定 ---
     const STORAGE_KEY_POSTS = 'sky_color_posts';
     const STORAGE_KEY_LAST_DATE = 'sky_color_last_post_date';
-    const MAX_RADIUS = 40;
-    const MIN_RADIUS = 20;
+    ////const MAX_RADIUS = 40;
+    ////const MIN_RADIUS = 20;
     // 統一サイズ（px）
-    const SHAPE_RADIUS = 30;
+    const SHAPE_RADIUS = 20;
+    // 1時間（ミリ秒）
+    const ONE_HOUR_MS = 60 * 60 * 1000;
 
     // --- DOM要素 ---
     const svg = document.getElementById('japanMap'); // SVG要素 日本地図
@@ -138,13 +140,23 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupRealtimeListener() {
         const q = query(collection(db, 'posts'));
         onSnapshot(q, (snapshot) => {
-            snapshot.docChanges().forEach((change) => {
-                if (change.type === 'added') {
-                    const post = change.doc.data();
-                    post.id = change.doc.id;
-                    drawPost(post);
-                }
-            });
+            // onSnapshot は初回で同期的にコールされることがあるため
+            // ここで処理をマクロタスクに遅延させ、スクリプト内の定数初期化が
+            // 終了してから実行されるようにする（ONE_HOUR_MS の TDZ 回避）。
+            setTimeout(() => {
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === 'added') {
+                        const post = change.doc.data();
+                        post.id = change.doc.id;
+                        // サーバ側の date がある想定。古い投稿は表示しない
+                        if (!isPostExpired(post)) {
+                            drawPost(post);
+                        }
+                    }
+                });
+                // 受信後に念のため古い要素を掃除
+                pruneOldPosts();
+            }, 0);
         });
     }
 
@@ -176,6 +188,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const color = colorPicker.value;
+        // 投稿時に一言を入力（任意） — フォームの input#messageInput から取得
+        const noteInput = document.getElementById('messageInput');
+        const note = noteInput ? (noteInput.value || '').trim() : '';
         // サイズを統一する（ランダム化をやめる）
         const radius = SHAPE_RADIUS;
 
@@ -185,7 +200,8 @@ document.addEventListener('DOMContentLoaded', () => {
             x: selectedPosition.x,
             y: selectedPosition.y,
             r: radius,
-            date: new Date().toISOString()
+            date: new Date().toISOString(),
+            note: note
         };
 
         submitBtn.disabled = true;
@@ -199,6 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 y: selectedPosition.y,
                 r: radius,
                 date: serverTimestamp(),
+                note: note,
                 uid: currentUser ? currentUser.uid : null
             });
 
@@ -212,7 +229,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // ローカルにも保存（デバッグ用）および描画
             newPost.id = docRef.id;
             savePost(newPost);
-            //drawPost(newPost);
+            // クライアント側では1時間フィルタを適用しているため、描画は条件に合うときのみ行う
+            if (!isPostExpired(newPost)) drawPost(newPost);
+
+            // 投稿後は入力をクリア
+            if (noteInput) noteInput.value = '';
 
             // 状態更新
             selectedPosition = null;
@@ -232,8 +253,50 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- データ操作（localStorageを併用、デバッグ用） ---
     function loadAndDrawPosts() {
         const posts = getPosts();
-        posts.forEach(drawPost);
+        const now = Date.now();
+        posts.forEach(p => { if (!isPostExpired(p, now)) drawPost(p); });
     }
+
+    // 現在時刻(ms)を取得するユーティリティ
+    function getPostTimeMs(post) {
+        if (!post || !post.date) return 0;
+        // Firestore Timestamp object
+        if (post.date.toDate && typeof post.date.toDate === 'function') {
+            return post.date.toDate().getTime();
+        }
+        // ISO文字列
+        if (typeof post.date === 'string') {
+            const t = Date.parse(post.date);
+            return isNaN(t) ? 0 : t;
+        }
+        // 数値ミリ秒
+        if (typeof post.date === 'number') return post.date;
+        // seconds/nanos オブジェクト
+        if (post.date.seconds) return post.date.seconds * 1000;
+        return 0;
+    }
+
+    function isPostExpired(post, nowMs) {
+        const now = nowMs || Date.now();
+        const t = getPostTimeMs(post);
+        if (!t) return true; // 日付が取れなければ除外
+        return (now - t) > ONE_HOUR_MS;
+    }
+
+    // 画面に表示されている投稿で1時間以上経過したものを削除
+    function pruneOldPosts() {
+        const now = Date.now();
+        const children = Array.from(postsLayer.children);
+        children.forEach(el => {
+            const timeMs = el.dataset && el.dataset.time ? parseInt(el.dataset.time, 10) : NaN;
+            if (!timeMs || (now - timeMs) > ONE_HOUR_MS) {
+                el.remove();
+            }
+        });
+    }
+
+    // 定期的に表示を掃除（1分ごと）
+    setInterval(pruneOldPosts, 60 * 1000);
 
     function getPosts() {
         const json = localStorage.getItem(STORAGE_KEY_POSTS);
@@ -350,7 +413,9 @@ document.addEventListener('DOMContentLoaded', () => {
         path.setAttribute('fill', `url(#${gradientId})`);
         path.classList.add('post-circle');
         path.dataset.date = post.date ? (post.date.toDate ? post.date.toDate().toLocaleString() : new Date(post.date).toLocaleString()) : '';
+        path.dataset.time = getPostTimeMs(post) || '';
         path.dataset.color = post.color;
+        path.dataset.note = post.note || post.message || '';
         postsLayer.appendChild(path);
     }
 
@@ -407,9 +472,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (evt.target && evt.target.classList && evt.target.classList.contains('post-circle')) {
             const date = evt.target.dataset.date;
             const color = evt.target.dataset.color;
-            tooltip.innerHTML = `日時: ${date}<br>ソラ: <span style="color:${color}">███</span> ${color}`;
-            tooltip.style.display = 'block';
+            const note = evt.target.dataset.note;
+            tooltip.innerHTML = `日時: ${date}<br>ソラ: <span style="color:${color}">███</span> ${color}` + (note ? `<br>一言: ${escapeHtml(note)}` : '');
+            tooltip.style.display = 'block'; //TODO ツールチップ表示改善
         }
+    }
+
+    // シンプルなエスケープ（XSS軽減）
+    function escapeHtml(str) {
+        return String(str).replace(/[&<>"]/g, function (s) {
+            return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s]);
+        });
     }
 
     function moveTooltip(evt) {
