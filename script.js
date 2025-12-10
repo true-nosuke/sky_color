@@ -57,11 +57,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedPosition = null; // {x, y}
     let currentUser = null;
     let hasPostedToday = false;
+    let blockedPatterns = []; // ブロック対象パターンリスト
 
     // --- 初期化処理 ---
     init();
 
     function init() {
+        // フィルタリストの読み込み
+        loadFilterPatterns();
+
         // 認証検知（匿名サインインを行う）
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -94,6 +98,57 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- メインロジック ---
+
+    // フィルタパターンリストの読み込み
+    async function loadFilterPatterns() {
+        try {
+            const response = await fetch('ng-words.json');
+            const data = await response.json();
+            blockedPatterns = data.hashes || [];
+            console.log('フィルタパターンを読み込みました:', blockedPatterns.length, '件');
+        } catch (error) {
+            console.error('フィルタリストの読み込みに失敗しました:', error);
+            blockedPatterns = [];
+        }
+    }
+
+    // テキストを識別子に変換
+    async function convertToIdentifier(text) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(text);
+        const buffer = await crypto.subtle.digest('SHA-256', data);
+        const array = Array.from(new Uint8Array(buffer));
+        const identifier = array.map(b => b.toString(16).padStart(2, '0')).join('');
+        return identifier;
+    }
+
+    // テキスト内に不適切な内容が含まれているかチェック
+    async function containsInvalidContent(text) {
+        if (!text || !blockedPatterns || blockedPatterns.length === 0) {
+            return false;
+        }
+
+        // 正規化：小文字化、全角→半角変換など
+        const normalizedText = text.toLowerCase().trim();
+        
+        // 単語単位でチェック
+        const words = normalizedText.split(/[\s、。,.!?！？]+/);
+        for (const word of words) {
+            if (word.length === 0) continue;
+            const id = await convertToIdentifier(word);
+            if (blockedPatterns.includes(id)) {
+                return true;
+            }
+        }
+
+        // 文字列全体もチェック
+        const fullId = await convertToIdentifier(normalizedText);
+        if (blockedPatterns.includes(fullId)) {
+            return true;
+        }
+
+        return false;
+    }
 
     /*
     // 位置情報取得処理（コメントアウト：手動選択のみに変更）
@@ -143,17 +198,17 @@ document.addEventListener('DOMContentLoaded', () => {
             // onSnapshot は初回で同期的にコールされることがあるため
             // ここで処理をマクロタスクに遅延させ、スクリプト内の定数初期化が
             // 終了してから実行されるようにする（ONE_HOUR_MS の TDZ 回避）。
-            setTimeout(() => {
-                snapshot.docChanges().forEach((change) => {
+            setTimeout(async () => {
+                for (const change of snapshot.docChanges()) {
                     if (change.type === 'added') {
                         const post = change.doc.data();
                         post.id = change.doc.id;
                         // サーバ側の date がある想定。古い投稿は表示しない
                         if (!isPostExpired(post)) {
-                            drawPost(post);
+                            await drawPost(post);
                         }
                     }
-                });
+                }
                 // 受信後に念のため古い要素を掃除
                 pruneOldPosts();
             }, 0);
@@ -191,6 +246,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // 投稿時に一言を入力（任意） — フォームの input#messageInput から取得
         const noteInput = document.getElementById('messageInput');
         const note = noteInput ? (noteInput.value || '').trim() : '';
+
+        // 内容チェック
+        if (note && await containsInvalidContent(note)) {
+            showMessage('投稿内容に不適切な言葉が含まれています。修正してください。', 'error');
+            return;
+        }
+
         // サイズを統一する（ランダム化をやめる）
         const radius = SHAPE_RADIUS;
 
@@ -230,7 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
             newPost.id = docRef.id;
             savePost(newPost);
             // クライアント側では1時間フィルタを適用しているため、描画は条件に合うときのみ行う
-            if (!isPostExpired(newPost)) drawPost(newPost);
+            if (!isPostExpired(newPost)) await drawPost(newPost);
 
             // 投稿後は入力をクリア
             if (noteInput) noteInput.value = '';
@@ -251,10 +313,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- データ操作（localStorageを併用、デバッグ用） ---
-    function loadAndDrawPosts() {
+    async function loadAndDrawPosts() {
         const posts = getPosts();
         const now = Date.now();
-        posts.forEach(p => { if (!isPostExpired(p, now)) drawPost(p); });
+        for (const p of posts) {
+            if (!isPostExpired(p, now)) {
+                await drawPost(p);
+            }
+        }
     }
 
     // 現在時刻(ms)を取得するユーティリティ
@@ -365,7 +431,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     // --- 描画・UI関連 ---
-    function drawPost(post) {
+    async function drawPost(post) {
+        // 内容チェック（表示前に確認）
+        if (post.note && await containsInvalidContent(post.note)) {
+            console.warn('不適切な投稿をスキップしました:', post.id);
+            return; // 表示しない
+        }
+
         const gradientId = `grad-${post.id || Math.random().toString(36).substr(2, 9)}`;
         let defs = svg.querySelector('defs');
         if (!defs) {
@@ -466,7 +538,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- ツールチップ ---
-    //! 表示されないバグあり
     function showTooltip(evt) {
         // どの要素でも post-circle クラスを持っていればツールチップを表示する
         if (evt.target && evt.target.classList && evt.target.classList.contains('post-circle')) {
