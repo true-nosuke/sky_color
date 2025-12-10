@@ -4,6 +4,8 @@
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 ## 概要
+[https://true-nosuke.github.io/sky_color/index.html](https://true-nosuke.github.io/sky_color/index.html)
+上記のURLで公開しています。
 
 **日本をソラ色に**は、日本全国のユーザーが今見ている空の色を共有し、日本地図をリアルタイムで彩るインタラクティブなWebアプリケーションです。
 
@@ -27,25 +29,6 @@
 - **ローカルストレージ**: 投稿制限の管理に使用
 - **サーバーサイド検証**: セキュリティルールによる保護
 
-### フィルタパターンの追加
-
-不適切な言葉をブロックするには、`ng-words.json`にパターンを追加します：
-
-```javascript
-// ブラウザのコンソールでハッシュを生成
-async function generateHash(word) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(word.toLowerCase().trim());
-  const buffer = await crypto.subtle.digest('SHA-256', data);
-  const array = Array.from(new Uint8Array(buffer));
-  return array.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-// 使用例
-await generateHash('ブロックしたい言葉');
-```
-
-生成されたハッシュを`ng-words.json`の`hashes`配列に追加してください。
 
 ## 生成AIの使用
 このウェブアプリのソースコードの一部は生成AIを用いています。
@@ -65,5 +48,3 @@ await generateHash('ブロックしたい言葉');
 Nosuke
 
 - GitHub: [@true-nosuke](https://github.com/true-nosuke)
-
----
