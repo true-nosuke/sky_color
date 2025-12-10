@@ -34,13 +34,15 @@ const auth = getAuth(app);
 document.addEventListener('DOMContentLoaded', () => {
     // --- 定数・設定 ---
     const STORAGE_KEY_POSTS = 'sky_color_posts';
-    const STORAGE_KEY_LAST_DATE = 'sky_color_last_post_date';
+    const STORAGE_KEY_POST_HISTORY = 'sky_color_post_history'; // 投稿履歴（タイムスタンプ配列）
     ////const MAX_RADIUS = 40;
     ////const MIN_RADIUS = 20;
     // 統一サイズ（px）
     const SHAPE_RADIUS = 20;
     // 1時間（ミリ秒）
     const ONE_HOUR_MS = 60 * 60 * 1000;
+    // 1時間の投稿制限回数
+    const HOURLY_POST_LIMIT = 3;
 
     // --- DOM要素 ---
     const svg = document.getElementById('japanMap'); // SVG要素 日本地図
@@ -56,7 +58,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 状態管理 ---
     let selectedPosition = null; // {x, y}
     let currentUser = null;
-    let hasPostedToday = false;
     let blockedPatterns = []; // ブロック対象パターンリスト
 
     // --- 初期化処理 ---
@@ -84,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // リアルタイムリスナーと初期描画
         setupRealtimeListener();
         loadAndDrawPosts();
-        checkDailyLimit();
+        checkPostLimit();
 
         // イベントリスナー登録
         svg.addEventListener('click', handleMapClick);
@@ -225,8 +226,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleMapClick(evt) {
-        if (isDailyLimitReached()) {
-            showMessage('本日は既に投稿済みです。明日また来てください！', 'error');
+        if (isPostLimitReached()) {
+            showMessage('投稿制限に達しました。しばらく待ってから再度お試しください。', 'error');
             return;
         }
         const point = getSVGCoordinates(evt);
@@ -237,8 +238,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 投稿ボタンクリック時の処理（async にして await を使用可能にする）
     async function handleSubmit() {
         if (!selectedPosition) return;
-        if (isDailyLimitReached()) {
-            showMessage('エラー: 本日は既に投稿済みです！', 'error');
+        if (isPostLimitReached()) {
+            showMessage('エラー: 投稿制限に達しました！', 'error');
             return;
         }
 
@@ -282,6 +283,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             // ユーザー最終投稿日時更新（匿名ユーザー対応）
+            // 履歴を配列で保持するように変更（Firestore側は簡易的に最終投稿日時のみ更新、またはサブコレクションで管理が理想だが、
+            // ここでは既存の lastPostDate を更新しつつ、クライアント側で回数制限を行う）
             if (currentUser) {
                 await setDoc(doc(db, 'users', currentUser.uid), {
                     lastPostDate: serverTimestamp()
@@ -291,6 +294,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // ローカルにも保存（デバッグ用）および描画
             newPost.id = docRef.id;
             savePost(newPost);
+            // 投稿履歴を更新
+            updatePostHistory();
+
             // クライアント側では1時間フィルタを適用しているため、描画は条件に合うときのみ行う
             if (!isPostExpired(newPost)) await drawPost(newPost);
 
@@ -302,7 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentSelection.style.display = 'none';
             submitBtn.disabled = true;
             submitBtn.textContent = '投稿完了';
-            checkDailyLimit();
+            checkPostLimit();
             showMessage('投稿成功！ありがとうございました！', 'success');
         } catch (error) {
             console.error('Error adding document: ', error);
@@ -373,41 +379,51 @@ document.addEventListener('DOMContentLoaded', () => {
         const posts = getPosts();
         posts.push(post);
         localStorage.setItem(STORAGE_KEY_POSTS, JSON.stringify(posts));
-        localStorage.setItem(STORAGE_KEY_LAST_DATE, new Date().toDateString());
     }
 
-    function isDailyLimitReached() {
-        const lastDate = localStorage.getItem(STORAGE_KEY_LAST_DATE);
-        const today = new Date().toDateString();
-        return lastDate === today;
+    // 投稿履歴を取得（タイムスタンプの配列）
+    function getPostHistory() {
+        const json = localStorage.getItem(STORAGE_KEY_POST_HISTORY);
+        return json ? JSON.parse(json) : [];
     }
 
-    async function checkDailyLimit() {
-        if (isDailyLimitReached()) {
-            submitBtn.disabled = true;
-            submitBtn.textContent = '本日の投稿は完了しています';
-            showMessage('本日は既に投稿済みです。', 'success');
-            return;
+    // 投稿履歴を更新（現在時刻を追加し、1時間以上前のものを削除）
+    function updatePostHistory() {
+        let history = getPostHistory();
+        const now = Date.now();
+        // 新しい投稿を追加
+        history.push(now);
+        // 1時間以内のものだけ残す
+        history = history.filter(time => (now - time) < ONE_HOUR_MS);
+        localStorage.setItem(STORAGE_KEY_POST_HISTORY, JSON.stringify(history));
+    }
+
+    // 投稿制限に達しているかチェック
+    function isPostLimitReached() {
+        let history = getPostHistory();
+        const now = Date.now();
+        // 1時間以内の投稿数をカウント（ついでに掃除）
+        const recentPosts = history.filter(time => (now - time) < ONE_HOUR_MS);
+        
+        // 掃除した結果を保存
+        if (recentPosts.length !== history.length) {
+            localStorage.setItem(STORAGE_KEY_POST_HISTORY, JSON.stringify(recentPosts));
         }
-        // Firestore 側でも確認したい場合は currentUser が入ってから行う
-        if (currentUser) {
-            try {
-                const userRef = doc(db, 'users', currentUser.uid);
-                const userSnap = await getDoc(userRef);
-                if (userSnap.exists()) {
-                    const data = userSnap.data();
-                    if (data.lastPostDate) {
-                        const lastDate = new Date(data.lastPostDate.toDate()).toDateString();
-                        const today = new Date().toDateString();
-                        if (lastDate === today) {
-                            submitBtn.disabled = true;
-                            submitBtn.textContent = '本日の投稿は完了しています';
-                            showMessage('本日は既に投稿済みです。', 'success');
-                        }
-                    }
-                }
-            } catch (e) {
-                console.warn('checkDailyLimit firestore check failed', e);
+        
+        return recentPosts.length >= HOURLY_POST_LIMIT;
+    }
+
+    async function checkPostLimit() {
+        if (isPostLimitReached()) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = '投稿制限中（1時間に3回まで）';
+            showMessage('投稿制限に達しました。しばらくお待ちください。', 'normal');
+            return;
+        } else {
+            // 制限に達していなければボタンの状態をリセット（選択中なら有効化）
+            if (selectedPosition) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'この場所に色を置く';
             }
         }
     }
@@ -415,7 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleReset() {
         if (confirm('本当に全データを削除しますか？')) {
             localStorage.removeItem(STORAGE_KEY_POSTS);
-            localStorage.removeItem(STORAGE_KEY_LAST_DATE);
+            localStorage.removeItem(STORAGE_KEY_POST_HISTORY);
             
             // Firestore側のデータ削除
             const q = query(collection(db, 'posts'));
