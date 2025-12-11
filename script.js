@@ -41,8 +41,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const SHAPE_RADIUS = 20;
     // 1時間（ミリ秒）
     const ONE_HOUR_MS = 60 * 60 * 1000;
+
+    const POSTS_DELETE_TIME = 60 * 60 * 1000 * 3; // 投稿が自動削除されるまでの時間（3時間）
+
     // 1時間の投稿制限回数
     const HOURLY_POST_LIMIT = 3;
+    // 一言メッセージの最大文字数
+    const MAX_NOTE_LENGTH = 10;
 
     // --- DOM要素 ---
     const svg = document.getElementById('japanMap'); // SVG要素 日本地図
@@ -90,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // イベントリスナー登録
         svg.addEventListener('click', handleMapClick);
         // geoBtn.addEventListener('click', handleGeoLocation); // コメントアウト：位置情報取得機能を無効化
-        resetLocalBtn.addEventListener('click', handleReset);
+        //resetLocalBtn.addEventListener('click', handleReset);
         submitBtn.addEventListener('click', handleSubmit);
         // ツールチップ制御 (イベント委譲)
         postsLayer.addEventListener('mouseover', showTooltip);
@@ -223,6 +228,11 @@ document.addEventListener('DOMContentLoaded', () => {
         currentSelection.style.display = 'block';
         submitBtn.disabled = false;
         submitBtn.textContent = 'この場所に色を置く';
+
+        // 波紋エフェクトを追加
+        submitBtn.classList.remove('ripple-active');
+        void submitBtn.offsetWidth; // リフローを強制してアニメーションをリセット
+        submitBtn.classList.add('ripple-active');
     }
 
     function handleMapClick(evt) {
@@ -247,6 +257,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // 投稿時に一言を入力（任意） — フォームの input#messageInput から取得
         const noteInput = document.getElementById('messageInput');
         const note = noteInput ? (noteInput.value || '').trim() : '';
+
+        // 文字数チェック
+        if (note.length > MAX_NOTE_LENGTH) {
+            showMessage(`一言メッセージは${MAX_NOTE_LENGTH}文字以内で入力してください。`, 'error');
+            return;
+        }
 
         // 内容チェック
         if (note && await containsInvalidContent(note)) {
@@ -352,7 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const now = nowMs || Date.now();
         const t = getPostTimeMs(post);
         if (!t) return true; // 日付が取れなければ除外
-        return (now - t) > ONE_HOUR_MS;
+        return (now - t) > POSTS_DELETE_TIME;
     }
 
     // 画面に表示されている投稿で1時間以上経過したものを削除
@@ -448,6 +464,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // --- 描画・UI関連 ---
     async function drawPost(post) {
+        // 文字数チェック（表示前に確認）
+        if (post.note && post.note.length > MAX_NOTE_LENGTH) {
+            console.warn('文字数制限超過の投稿をスキップしました:', post.id);
+            return; // 表示しない
+        }
+
         // 内容チェック（表示前に確認）
         if (post.note && await containsInvalidContent(post.note)) {
             console.warn('不適切な投稿をスキップしました:', post.id);

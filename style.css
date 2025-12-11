@@ -167,3 +167,30 @@ svg {
         flex-wrap: wrap;
     }
 }
+
+/*messageInput縺ｮ繧ｹ繧ｿ繧､繝ｫ*/
+#messageInput {
+    width: 300px;
+    padding: 8px 12px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    transition: border-color 0.3s;
+}
+/* 波紋エフェクト */
+@keyframes ripple-effect {
+ 0% {
+ box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7);
+ }
+ 70% {
+ box-shadow: 0 0 0 15px rgba(0, 123, 255, 0);
+ }
+ 100% {
+ box-shadow: 0 0 0 0 rgba(0, 123, 255, 0);
+ }
+}
+
+.ripple-active {
+ animation: ripple-effect 0.6s ease-out;
+}
+

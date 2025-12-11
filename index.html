@@ -18,7 +18,10 @@
 <body>
     <header>
         <h1>日本をソラ色に</h1>
-        <p>この国をソラで塗りましょう</p>
+        <p>あなたがいる場所の空の色で塗りましょう</p>
+        <p>あなたの感情が少し混ざっていても良いです</p>
+        <p>投稿は3時間で消えます</p>
+        
     </header>
 
     <main>
@@ -30,18 +33,18 @@
             <div class="control-group">
                 <label for="messageInput">一言（任意）:</label>
                 <br>
-                <input type="text" id="messageInput" placeholder="このソラにひと言…" maxlength="140">
+                <input type="text" id="messageInput" placeholder="10文字以内でひと言…" maxlength="10">
             </div>
 
-            <div id="statusMessage" class="status"></div>
+            
 
             <div class="button-group">
                 <!--!<button id="geoBtn" class="primary-btn">📍 現在地から位置を決める</button>-->
-                <button id="submitBtn" disabled>この場所に色を置く</button>
+                <button id="submitBtn" disabled>この場所に色を塗る</button>
             </div>
-            <p class="hint">※地図をクリックして位置を微調整できます</p>
-
-            <button id="resetLocalBtn" class="secondary-btn">データをリセット(デバッグ用)</button>
+            <p class="hint">※地図をクリックして位置を決められます。（１時間に３回まで投稿できます。）</p>
+<div id="statusMessage" class="status"></div>
+            <!--<button id="resetLocalBtn" class="secondary-btn">データをリセット(デバッグ用)</button>-->
         </div>
 
         <div class="map-container">
@@ -85,7 +88,7 @@
                 <g id="postsLayer"></g>
 
                 <!-- 現在選択中の位置を示すマーカー -->
-                <circle id="currentSelection" r="10" fill="none" stroke="#ff0000" stroke-width="2" display="none" />
+                <circle id="currentSelection" r="10" fill="none" stroke="#ff0000" stroke-width="3" display="none" />
             </svg>
         </div>
     </main>
